@@ -1,0 +1,61 @@
+import { connection } from "next/server";
+import { Suspense } from "react";
+
+import { HardRedirect } from "@/components/auth/hard-redirect";
+import { FairJudging } from "@/components/landing/fair-judging";
+import { Faq } from "@/components/landing/faq";
+import { FinalCta } from "@/components/landing/final-cta";
+import { ForOrganizers } from "@/components/landing/for-organizers";
+import { ForParticipantsJudges } from "@/components/landing/for-participants-judges";
+import {
+  HappeningNow,
+  HappeningNowSkeleton,
+} from "@/components/landing/happening-now";
+import { Hero } from "@/components/landing/hero";
+import { Lifecycle } from "@/components/landing/lifecycle";
+import {
+  LandOnHash,
+  SmoothAnchors,
+} from "@/components/layout/smooth-anchors";
+import { getCurrentUser } from "@/lib/auth/dal";
+import { ROLE_HOME } from "@/lib/auth/permissions";
+
+// The landing page (agent-briefs landing plan): the HackHub story, top to
+// bottom. Each section is its own file in components/landing, owned by one
+// person, and uses LandingSection (components/landing/section) for spacing and
+// the heading scale. Only the Hero has an h1. The site footer comes from
+// (public)/layout.tsx. A signed-in user goes to their role home, with a full
+// load so a tab still showing the signed-out header gets the signed-in one.
+
+async function RedirectSignedIn() {
+  await connection();
+  const user = await getCurrentUser();
+  return user ? <HardRedirect href={ROLE_HOME[user.role]} /> : null;
+}
+
+export default function LandingPage() {
+  return (
+    <>
+      <Suspense fallback={null}>
+        <RedirectSignedIn />
+      </Suspense>
+      {/* The header's section links glide here (motion-safe only), and a
+          deep link like /#faq lands even if the browser's own jump missed. */}
+      <SmoothAnchors />
+      <LandOnHash />
+
+      <main className="mx-auto w-full max-w-6xl px-4">
+        <Hero />
+        <Lifecycle />
+        <ForOrganizers />
+        <FairJudging />
+        <ForParticipantsJudges />
+        <Suspense fallback={<HappeningNowSkeleton />}>
+          <HappeningNow />
+        </Suspense>
+        <Faq />
+        <FinalCta />
+      </main>
+    </>
+  );
+}

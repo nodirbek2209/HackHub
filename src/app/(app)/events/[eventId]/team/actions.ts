@@ -30,6 +30,7 @@ const NAME_TAKEN = "A team with this name already exists in this event.";
 const UNKNOWN_CODE =
   "No team in this event has this code. Check it with your team.";
 const NOT_ON_TEAM = "You're not on a team in this event.";
+const NOT_A_PARTICIPANT = "Only participants can be on a team.";
 
 /** Tries to create a team before giving up on invite-code collisions. */
 const INVITE_CODE_ATTEMPTS = 3;
@@ -38,6 +39,20 @@ type Tx = Prisma.TransactionClient;
 
 /** The team name is taken in this event: a field error, not a form error. */
 class NameTaken extends Error {}
+
+/**
+ * Share-locks the user's row and re-reads their role inside the transaction.
+ * Changing a role takes FOR UPDATE on the same row (organizer/users/actions),
+ * so a participant can't become a judge between this check and the team
+ * write: the role change either waits and then sees the membership, or
+ * commits first and this refuses. requireRole() alone runs before the
+ * transaction, so it can't close that window (Decision 11).
+ */
+async function lockParticipant(tx: Tx, userId: string) {
+  const rows = await tx.$queryRaw<{ role: string }[]>`
+    SELECT role::text AS role FROM users WHERE id = ${userId} FOR SHARE`;
+  if (rows[0]?.role !== "PARTICIPANT") throw new RuleError(NOT_A_PARTICIPANT);
+}
 
 /** Locks the team row until the transaction ends (two people, one last place). */
 async function lockTeam(tx: Tx, teamId: string) {
@@ -83,6 +98,7 @@ export async function createTeam(
   for (let attempt = 1; attempt <= INVITE_CODE_ATTEMPTS; attempt++) {
     try {
       await prisma.$transaction(async (tx) => {
+        await lockParticipant(tx, user.id);
         if (!(await isRegistered(tx, event.id, user.id))) {
           throw new RuleError(NOT_REGISTERED);
         }
@@ -161,6 +177,7 @@ export async function joinTeam(
 
   try {
     const teamName = await prisma.$transaction(async (tx) => {
+      await lockParticipant(tx, user.id);
       const found = await tx.team.findUnique({
         where: { inviteCode: code },
         select: { id: true, eventId: true },

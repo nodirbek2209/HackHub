@@ -29,8 +29,18 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      - name: Unit tests
-        run: npm run test
+      - name: Unit tests with coverage
+        run: npm run test:coverage
+
+      - name: Upload coverage reports to Codecov
+        # Secrets aren't passed to pull requests from forks, so a missing
+        # token there skips the upload instead of failing the build.
+        if: ${{ !cancelled() }}
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage/lcov.info
+          fail_ci_if_error: false
 
       - name: Build
         run: npm run build

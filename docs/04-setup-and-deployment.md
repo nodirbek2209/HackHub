@@ -244,6 +244,30 @@ If `master` is ever force-pushed, the timer stops deploying and logs one `ERROR 
 changed (`git fetch origin && git diff HEAD origin/master --stat`), then run
 `git reset --hard origin/master && systemctl start hackhub-autodeploy.service`.
 
+## Continuous integration and deployment
+
+Pipeline: pull request → CI → merge to `master` → the server's timer deploys it.
+
+| Workflow / job | When | What it checks |
+|---|---|---|
+| `ci.yml` › `verify` | PRs and `master` | Lint, typecheck, unit tests with coverage (Codecov), `next build` |
+| `ci.yml` › `migrations` | PRs and `master` | `prisma migrate deploy` and the seed on an empty PostgreSQL 18, then `prisma migrate diff --exit-code`: fails when the schema has a change with no migration |
+| `ci.yml` › `e2e` | PRs and `master` | Playwright (Chromium) against a seeded database with the demo data; the HTML report is uploaded as an artifact on every run |
+| `ci.yml` › `docker` | PRs and `master` | Builds the `migrate` and `runner` targets of the `Dockerfile` (not pushed) |
+| `ci.yml` › `audit` | PRs and `master` | `npm audit` on production dependencies, fails on high or critical |
+| `codeql.yml` | PRs, `master`, weekly | CodeQL analysis of the JavaScript and TypeScript code |
+| Dependabot | Weekly / monthly | Updates npm packages, GitHub Actions and the base image |
+
+A newer push to a pull request cancels its older run. Runs on `master` are never cancelled.
+
+**Deployment** is pull-based (see [Automatic deploys](#automatic-deploys)): the server fetches `master`, so CI holds no
+server credentials. The deploy script doesn't look at CI results, so keep `master` green with branch protection:
+Settings → Branches → rule for `master` → require a pull request and these status checks: `Lint, typecheck, test,
+build`, `Database migrations`, `End-to-end tests`, `Docker image`. Add `Dependency audit` too if you want advisories to
+block merges.
+
+Repository secrets: `CODECOV_TOKEN` (optional; the upload doesn't fail the build without it).
+
 ## Smoke test after a deploy
 
 - [ ] `curl -fsS https://hackhub.mekhroj.uz/api/health` succeeds

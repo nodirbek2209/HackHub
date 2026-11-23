@@ -28,9 +28,12 @@ npm run lint
 npm run typecheck
 npm run test
 npm run build
+npm run test:e2e   # needs the local database and demo seed (docs/04)
 ```
 
-Run `npm run test:e2e` too when you change a flow the Playwright specs in `e2e/` cover.
+CI also applies the migrations to an empty PostgreSQL 18 and fails if `prisma/schema.prisma` has a change without a
+migration, builds the Docker image, audits production dependencies and runs CodeQL. See
+[docs/04](docs/04-setup-and-deployment.md#continuous-integration-and-deployment).
 
 - Keep changes focused; one topic per pull request.
 - Add or update tests when behaviour changes: unit tests sit next to the code as `*.test.ts`, end-to-end specs in

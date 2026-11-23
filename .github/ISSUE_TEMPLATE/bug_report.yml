@@ -1,5 +1,7 @@
+
 name: Bug report
 description: Something isn't working as expected.
+title: "[BUG] "
 labels: [bug]
 body:
   - type: textarea
@@ -9,16 +11,18 @@ body:
       description: What you did, what you expected, and what happened instead.
     validations:
       required: true
+
   - type: textarea
     id: reproduce
     attributes:
       label: Steps to reproduce
       placeholder: |
-        1. Sign in as an organizer and open an event ...
-        2. Close submissions and ...
-        3. ...
+        1. Sign in
+        2. Open the page
+        3. Reproduce the problem
     validations:
       required: true
+
   - type: dropdown
     id: role
     attributes:
@@ -30,6 +34,20 @@ body:
         - Signed out
     validations:
       required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Bug severity
+      description: How seriously does this bug affect your work?
+      options:
+        - Low
+        - Medium
+        - High
+        - Critical
+    validations:
+      required: true
+
   - type: dropdown
     id: where
     attributes:
@@ -40,18 +58,22 @@ body:
         - Self-hosted with Docker
     validations:
       required: true
+
   - type: input
     id: page
     attributes:
       label: Page and device
-      description: The URL path and the browser or phone, e.g. `/events/demo/team` on Safari, iPhone.
+      description: URL path and browser or phone.
+      placeholder: /events/demo/team on Safari, iPhone
+
   - type: input
     id: version
     attributes:
       label: Version or commit
+
   - type: textarea
     id: logs
     attributes:
       label: Relevant logs
-      description: Remove passwords, session cookies, `AUTH_SECRET` and database URLs before pasting.
+      description: Remove passwords, session cookies, AUTH_SECRET and database URLs before pasting.
       render: shell
